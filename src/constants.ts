@@ -1,5 +1,6 @@
 import {
   mainnet,
+  sepolia,
   polygon,
   Chain,
   polygonAmoy,
@@ -9,6 +10,7 @@ import {
 
 const chains = [
   mainnet,
+  sepolia,
   polygon,
   polygonAmoy,
   arbitrumSepolia,

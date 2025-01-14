@@ -10,8 +10,8 @@ const Home = () => {
 
   return (
     <div>
-      <h1>Sequence Kit Starter - React</h1>
-      <h2 className="homepage__marginBtNormal">Embedded Wallet</h2>
+      <h1>Party Barrage</h1>
+      <h2 className="homepage__marginBtNormal"> </h2>
       {isConnected ? <MainConnected /> : <Connector />}
       <Footer />
     </div>

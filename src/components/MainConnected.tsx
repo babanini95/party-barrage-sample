@@ -5,6 +5,7 @@ import Disconnector from "./Disconnector";
 import TestSignMessage from "./TestSignMessage";
 import TestVerifyMessage from "./TestVerifyMessage";
 import TestSendTransaction from "./TestSendTransaction";
+import TestConvertToken from "./TestConvertToken";
 import { Missing } from "./Missing";
 
 const MainConnected = () => {
@@ -26,6 +27,7 @@ const MainConnected = () => {
       <Disconnector />
       <ChainInfo chain={chain} address={address} />
       <Box display="flex" flexDirection="column" gap="4">
+        <TestConvertToken chainId={chainId} />
         <TestSignMessage />
         <TestVerifyMessage chainId={chainId} />
         <TestSendTransaction chainId={chainId} />
