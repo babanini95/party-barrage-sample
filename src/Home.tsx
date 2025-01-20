@@ -1,4 +1,5 @@
 import { useAccount } from "wagmi";
+import { useSignInEmail } from "@0xsequence/kit";
 
 import "./Home.css";
 import Connector from "./components/Connector";
@@ -7,6 +8,8 @@ import { Footer } from "./components/Footer";
 
 const Home = () => {
   const { isConnected } = useAccount();
+
+  console.log("wallet current email", useSignInEmail());
 
   return (
     <div>

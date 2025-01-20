@@ -1,10 +1,10 @@
-import { initializeApp } from 'firebase/app';
+import { auth } from '../FirebaseConfig';
 import {
-  getAuth,
   signInWithEmailAndPassword,
-  signOut
+  signOut,
+  // connectAuthEmulator,
+  createUserWithEmailAndPassword
 } from 'firebase/auth';
-import { firebaseConfig } from '../config';
 import { Box } from '@0xsequence/design-system';
 import { useState } from 'react';
 
@@ -15,8 +15,9 @@ const FirebaseConnector = () => {
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const firebaseApp = initializeApp(firebaseConfig);
-  const auth = getAuth(firebaseApp);
+  // if (window.location.hostname === 'localhost') {
+  //   connectAuthEmulator(auth, 'http://localhost/:4445');
+  // }
 
   function toggleSignIn() {
     if (auth.currentUser) {
@@ -31,26 +32,89 @@ const FirebaseConnector = () => {
         return;
       }
       // Sign in with email and pass.
-      signInWithEmailAndPassword(auth, email, password).catch(function (error) {
+      signInWithEmailAndPassword(auth, email, password).
+        then((userCredential) => {
+          // Signed in
+          const user = userCredential.user;
+          // ...
+          console.log('user: ', user.getIdToken());
+        }).
+        catch(function (error) {
+          // Handle Errors here.
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          if (errorCode === 'auth/wrong-password') {
+            alert('Wrong password.');
+          } else {
+            alert(errorMessage);
+          }
+          console.log(error);
+          // disable button
+        });
+    }
+  }
+
+  function handleSignUp() {
+    if (email.length < 4) {
+      alert('Please enter an email address.');
+      return;
+    }
+    if (password.length < 4) {
+      alert('Please enter a password.');
+      return;
+    }
+    // Create user with email and pass.
+    createUserWithEmailAndPassword(auth, email, password).
+      catch(function (error) {
         // Handle Errors here.
         const errorCode = error.code;
         const errorMessage = error.message;
-        if (errorCode === 'auth/wrong-password') {
-          alert('Wrong password.');
+        if (errorCode == 'auth/weak-password') {
+          alert('The password is too weak.');
         } else {
           alert(errorMessage);
         }
         console.log(error);
-        // disable button
       });
-    }
-    // enable button
   }
-
-
 
   return (
     <>
+      {/* {<Box display="flex" flexDirection="column" gap="2" marginBottom="8">
+        <label id="email">Email: </label>
+        <input
+          id="email"
+          type='text'
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <br />
+        <label id="pass">Enter password: </label>
+        <input
+          id="pass"
+          type={
+            showPassword ? "text" : "password"
+          }
+          value={password}
+          onChange={(e) =>
+            setPassword(e.target.value)
+          }
+        />
+        <label id="check">Show Password</label>
+        <input
+          id="check"
+          type="checkbox"
+          checked={showPassword}
+          onChange={() =>
+            setShowPassword((prev) => !prev)
+          }
+        />
+        <button
+          onClick={handleSignUp}
+        >
+          Sign Up Firebase
+        </button>
+      </Box>} */}
       <Box display="flex" flexDirection="column" gap="2" marginBottom="8">
         <label id="email">Email: </label>
         <input
@@ -83,7 +147,7 @@ const FirebaseConnector = () => {
         <button
           onClick={toggleSignIn}
         >
-          Sign In Firebase
+          Sign in Firebase
         </button>
       </Box>
     </>

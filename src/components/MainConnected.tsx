@@ -7,8 +7,24 @@ import TestVerifyMessage from "./TestVerifyMessage";
 import TestSendTransaction from "./TestSendTransaction";
 import TestConvertToken from "./TestConvertToken";
 import { Missing } from "./Missing";
+// import { useSignInEmail } from "@0xsequence/kit";
+// import { auth } from '../FirebaseConfig';
+// import { useDisconnect } from "wagmi";
+// import { useEffect } from "react";
 
 const MainConnected = () => {
+  // const { disconnect } = useDisconnect();
+
+  // useEffect(() => {
+  //   const walletIsValid: boolean = (useSignInEmail() === auth.currentUser?.email);
+  //   if (!walletIsValid) {
+  //     disconnect();
+  //   }
+  //   else {
+  //     console.log('Wallet is valid, ' + useSignInEmail());
+  //   }
+  // }, [])
+
   const { address, chain, chainId } = useAccount();
   if (!address) {
     return <Missing>an address</Missing>;
