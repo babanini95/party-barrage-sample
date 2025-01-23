@@ -1,11 +1,13 @@
-import { useOpenConnectModal } from "@0xsequence/kit";
+// import { useOpenConnectModal } from "@0xsequence/kit";
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../FirebaseConfig';
 import { Box } from '@0xsequence/design-system';
+import WalletConnector from "./WalletConnector";
 
-const Connector = () => {
-  const { setOpenConnectModal } = useOpenConnectModal();
+const Connector = (props: { setSignIn: React.Dispatch<React.SetStateAction<boolean>> }) => {
+  // const { setOpenConnectModal } = useOpenConnectModal();
+  const { setSignIn } = props
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -13,7 +15,7 @@ const Connector = () => {
 
   const handleSignIn = () => {
     if (auth.currentUser) {
-      useState(setIsFirebaseConnected(true));
+      setIsFirebaseConnected(true);
     } else {
       if (email.length < 4) {
         alert('Please enter an email address.');
@@ -86,12 +88,13 @@ const Connector = () => {
           </button>
         </Box>
         :
-        <Box display="flex" flexDirection="column" gap="2" marginBottom="8">
-          <p>Wallet Not connected</p>
-          <div className="card">
-            <button onClick={() => setOpenConnectModal(true)}>Connect</button>
-          </div>
-        </Box>
+        <WalletConnector setSignIn={setSignIn} />
+        // <Box display="flex" flexDirection="column" gap="2" marginBottom="8">
+        //   <p>Wallet Not connected</p>
+        //   <div className="card">
+        //     <button onClick={() => setOpenConnectModal(true)}>Connect</button>
+        //   </div>
+        // </Box>
       }
     </>
   );

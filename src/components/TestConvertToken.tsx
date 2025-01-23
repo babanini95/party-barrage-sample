@@ -1,5 +1,5 @@
 import { ChangeEvent, useEffect, useState } from "react";
-import { useWalletClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { Chain } from "viem";
 import { Box, Collapsible, Text } from "@0xsequence/design-system";
 import { abi } from "../contract-abi";
@@ -9,6 +9,7 @@ import { DocumentData, onSnapshot, doc, updateDoc, getDoc } from "firebase/fires
 import ErrorToast from "./ErrorToast";
 import chains from "../constants";
 import CardButton from "./CardButton";
+import { waas } from "../WaasConfig";
 
 const TestConvertToken = (props: { chainId: number }) => {
     const { chainId } = props;
@@ -23,8 +24,8 @@ const TestConvertToken = (props: { chainId: number }) => {
         useWaitForTransactionReceipt({
             hash: txnData,
         });
-    const { data: walletClient } = useWalletClient();
-
+    // const { data: walletClient } = useWalletClient();
+    const [isWalletConnected, setWalletConnected] = useState(false);
     const [inputAmount, setInputIngameToken] = useState(0);
     const [ingameTokenAmount, setIngameToken] = useState(0);
     const [lastTransaction, setLastTransaction] = useState<string | null>(null);
@@ -62,6 +63,15 @@ const TestConvertToken = (props: { chainId: number }) => {
         fetchWalletData();
     }, []);
 
+    useEffect(() => {
+        const setIfWalletConnected = async () => {
+            const checkIfWalletConnected = await waas.isSignedIn();
+            setWalletConnected(checkIfWalletConnected);
+        }
+
+        setIfWalletConnected();
+    });
+
     const onChangeIngameTokenAmount = (event: ChangeEvent<HTMLInputElement>) => {
         const value = event.target.valueAsNumber;
         setInputIngameToken(value);
@@ -78,7 +88,7 @@ const TestConvertToken = (props: { chainId: number }) => {
     };
 
     const convertToken = async () => {
-        if (!walletClient) return;
+        if (!isWalletConnected) return;
         const amountTokenConvert = ethers.parseUnits(String(ingameTokenAmount), 18);
         console.log("token convert: " + amountTokenConvert);
         await writeContractAsync({
@@ -87,8 +97,9 @@ const TestConvertToken = (props: { chainId: number }) => {
             functionName: 'claimToken',
             args: [amountTokenConvert]
         });
+        updateRealToken(ingameTokenAmount);
         updateIngameToken(0);
-        console.log("convert success")
+        console.log("convert success");
     };
 
     const fetchWalletData = async () => {
@@ -103,7 +114,7 @@ const TestConvertToken = (props: { chainId: number }) => {
         catch (err) {
             console.error(err);
         }
-    }
+    };
 
     const updateIngameToken = async (valueToUpdate: number) => {
         try {
@@ -116,7 +127,20 @@ const TestConvertToken = (props: { chainId: number }) => {
         catch (err) {
             console.error(err);
         }
-    }
+    };
+
+    const updateRealToken = async (valueToUpdate: number) => {
+        try {
+            console.log("real token update:", valueToUpdate);
+            await updateDoc(walletDocRef, {
+                realToken: valueToUpdate
+            });
+            console.log("real token update success");
+        }
+        catch (err) {
+            console.error(err);
+        }
+    };
 
     return (
         <>

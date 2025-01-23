@@ -1,5 +1,5 @@
 import { Box, Text } from "@0xsequence/design-system";
-import { useAccount } from "wagmi";
+// import { useAccount } from "wagmi";
 import ChainInfo from "./ChainInfo";
 import Disconnector from "./Disconnector";
 import TestSignMessage from "./TestSignMessage";
@@ -7,25 +7,39 @@ import TestVerifyMessage from "./TestVerifyMessage";
 import TestSendTransaction from "./TestSendTransaction";
 import TestConvertToken from "./TestConvertToken";
 import { Missing } from "./Missing";
-// import { useSignInEmail } from "@0xsequence/kit";
-// import { auth } from '../FirebaseConfig';
-// import { useDisconnect } from "wagmi";
-// import { useEffect } from "react";
+import { waas } from "../WaasConfig";
+import { getChain } from "../util";
+// import { toNetworkID } from "@0xsequence/waas/dist/declarations/src/networks";
+import { useEffect, useState } from "react";
+import { Address } from "viem";
 
 const MainConnected = () => {
-  // const { disconnect } = useDisconnect();
+  // const { address, chain, chainId } = useAccount();
+  const [address, setAddress] = useState<Address>();
 
-  // useEffect(() => {
-  //   const walletIsValid: boolean = (useSignInEmail() === auth.currentUser?.email);
-  //   if (!walletIsValid) {
-  //     disconnect();
-  //   }
-  //   else {
-  //     console.log('Wallet is valid, ' + useSignInEmail());
-  //   }
-  // }, [])
+  useEffect(() => {
+    const getAddress = async () => {
+      const walletAddress = await waas.getAddress();
+      setAddress(walletAddress as Address);
+    }
+    getAddress();
 
-  const { address, chain, chainId } = useAccount();
+    return () => {
+      setAddress("" as Address);
+    }
+
+  }, []);
+
+  function getValueOfNumber(val: string | number): number {
+    if (typeof val === 'number') {
+      return val.valueOf(); // number.valueOf() returns itself, so this is just for demonstration
+    }
+    return 0; // if it's a string, return undefined
+  }
+
+  const chainId = getValueOfNumber(waas.config.network.valueOf());
+  const chain = getChain(chainId);
+
   if (!address) {
     return <Missing>an address</Missing>;
   }
