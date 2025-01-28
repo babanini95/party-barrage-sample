@@ -13,7 +13,7 @@ const Connector = () => {
 
   const handleSignIn = () => {
     if (auth.currentUser) {
-      useState(setIsFirebaseConnected(true));
+      setIsFirebaseConnected(true);
     } else {
       if (email.length < 4) {
         alert('Please enter an email address.');
@@ -31,6 +31,7 @@ const Connector = () => {
           setIsFirebaseConnected(true);
           // ...
           console.log('user: ', user.getIdToken());
+          console.log("auth.currentUser: ", auth.currentUser);
         }).
         catch(function (error) {
           setIsFirebaseConnected(false);
@@ -45,6 +46,8 @@ const Connector = () => {
           console.log(error);
         });
     }
+
+
   }
 
   return (

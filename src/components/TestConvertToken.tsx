@@ -1,7 +1,7 @@
 import { ChangeEvent, useEffect, useState } from "react";
-import { useWalletClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useWalletClient } from "wagmi";
 import { Chain } from "viem";
-import { Box, Collapsible, Text } from "@0xsequence/design-system";
+import { Box, Text } from "@0xsequence/design-system";
 import { abi } from "../contract-abi";
 import { ethers } from "ethers";
 import { db } from "../FirebaseConfig";
@@ -9,9 +9,10 @@ import { DocumentData, onSnapshot, doc, updateDoc, getDoc } from "firebase/fires
 import ErrorToast from "./ErrorToast";
 import chains from "../constants";
 import CardButton from "./CardButton";
+import { User } from "firebase/auth";
 
-const TestConvertToken = (props: { chainId: number }) => {
-    const { chainId } = props;
+const TestConvertToken = (props: { chainId: number; currentFirebaseUser: User | null }) => {
+    const { chainId, currentFirebaseUser } = props;
     const {
         writeContractAsync,
         data: txnData,
@@ -24,14 +25,11 @@ const TestConvertToken = (props: { chainId: number }) => {
             hash: txnData,
         });
     const { data: walletClient } = useWalletClient();
-
     const [inputAmount, setInputIngameToken] = useState(0);
     const [ingameTokenAmount, setIngameToken] = useState(0);
     const [lastTransaction, setLastTransaction] = useState<string | null>(null);
     const [network, setNetwork] = useState<Chain | null>(null);
-
     const [snapshot, setSnapshot] = useState<DocumentData>();
-    const walletDocRef = doc(db, "players/bani/wallet", "wallet");
 
     useEffect(() => {
         if (txnData) {
@@ -49,18 +47,24 @@ const TestConvertToken = (props: { chainId: number }) => {
     }, [chainId]);
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(walletDocRef, (doc) => {
-            console.log("Current data: ", doc.data());
-            setSnapshot(doc.data());
-            const ingameTokenData = snapshot?.virtualToken;
-            setIngameToken(ingameTokenData);
-        });
-        return () => unsubscribe();
-    }, []);
+        if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
+            const docRef = doc(db, "Players", currentFirebaseUser.displayName);
+            const unsubscribe = onSnapshot(docRef, (doc) => {
+                console.log("Current data: ", doc.data());
+                if (doc.exists()) {
+                    setSnapshot(doc.data());
+                    const ingameTokenData = doc.data().wallet.virtualTokenBalance;
+                    setIngameToken(ingameTokenData);
+                    console.log("ingameTokenData", ingameTokenData);
+                }
+            });
+            return () => unsubscribe();
+        }
+    }, [currentFirebaseUser]);
 
     useEffect(() => {
         fetchWalletData();
-    }, []);
+    }, [currentFirebaseUser])
 
     const onChangeIngameTokenAmount = (event: ChangeEvent<HTMLInputElement>) => {
         const value = event.target.valueAsNumber;
@@ -71,7 +75,7 @@ const TestConvertToken = (props: { chainId: number }) => {
     };
 
     const addIngameToken = () => {
-        const valueToUpdate: number = snapshot?.virtualToken + inputAmount;
+        const valueToUpdate: number = snapshot?.wallet.virtualTokenBalance + inputAmount;
         updateIngameToken(valueToUpdate).then(() => {
             setInputIngameToken(0);
         });
@@ -87,46 +91,69 @@ const TestConvertToken = (props: { chainId: number }) => {
             functionName: 'claimToken',
             args: [amountTokenConvert]
         });
+        updateRealToken(snapshot?.wallet.tokenBalance + ingameTokenAmount);
         updateIngameToken(0);
-        console.log("convert success")
+        console.log("convert success");
     };
 
     const fetchWalletData = async () => {
         try {
-            const docSnap = await getDoc(walletDocRef);
+            if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
+                const docRef = doc(db, "Players", currentFirebaseUser.displayName);
+                const docSnap = await getDoc(docRef);
 
-            if (docSnap.exists()) {
-                const docData = docSnap.data();
-                setIngameToken(docData.virtualToken);
+                if (docSnap.exists()) {
+                    const docData = docSnap.data();
+                    setIngameToken(docData.wallet.virtualTokenBalance);
+                    console.log(docData);
+                }
             }
         }
         catch (err) {
             console.error(err);
         }
-    }
+    };
 
     const updateIngameToken = async (valueToUpdate: number) => {
         try {
-            console.log("valueToUpdate:", valueToUpdate);
-            await updateDoc(walletDocRef, {
-                virtualToken: valueToUpdate
-            });
-            setIngameToken(valueToUpdate);
+            if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
+                const docRef = doc(db, "Players", currentFirebaseUser.displayName);
+                console.log("valueToUpdate:", valueToUpdate);
+                await updateDoc(docRef, {
+                    "wallet.virtualTokenBalance": valueToUpdate
+                });
+                setIngameToken(valueToUpdate);
+                console.log("success");
+            }
         }
         catch (err) {
             console.error(err);
         }
-    }
+    };
+
+    const updateRealToken = async (valueToUpdate: number) => {
+        try {
+            if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
+                const docRef = doc(db, "Players", currentFirebaseUser.displayName);
+                await updateDoc(docRef, {
+                    "wallet.tokenBalance": valueToUpdate
+                });
+                console.log("real token update success");
+            }
+        }
+        catch (err) {
+            console.error(err);
+        }
+    };
 
     return (
         <>
-            <Collapsible
-                label="Add and Convert Ingame Token"
+            <Box
                 display="flex"
                 flexDirection="column"
                 gap="8"
             >
-                <Box display="inline-flex" flexDirection="row" gap="4" marginBottom="8">
+                <Box display="inline-flex" flexDirection="row" gap="4" marginBottom="4">
                     <label>
                         Ingame Token:  <input
                             value={inputAmount}
@@ -135,13 +162,11 @@ const TestConvertToken = (props: { chainId: number }) => {
                         />
                     </label>
                     <button onClick={addIngameToken}>
-                        Add Ingame Token
+                        Add Virtual Token
                     </button>
                 </Box>
-                <Box display="flex" flexDirection="column" gap="8" marginBottom="8">
-                    <Text color="text100">
-                        Ingame Token: {ingameTokenAmount}
-                    </Text>
+                <Box display="flex" flexDirection="column" gap="4" marginBottom="8">
+                    <Text>virtualToken: {snapshot?.wallet.virtualTokenBalance}</Text>
                     <CardButton
                         title="Convert"
                         description="Convert Ingame Token"
@@ -151,7 +176,7 @@ const TestConvertToken = (props: { chainId: number }) => {
                     {isConfirming && <Text>Confirming transaction...</Text>}
                     {isConfirmed && <Text>Transaction Confirmed</Text>}
                 </Box>
-            </Collapsible>
+            </Box>
             {lastTransaction && (
                 <Box display="flex" flexDirection="column" gap="4">
                     <Text>Last transaction hash: {lastTransaction}</Text>
@@ -169,13 +194,6 @@ const TestConvertToken = (props: { chainId: number }) => {
             {error && (
                 <ErrorToast message={error.message} onClose={reset} duration={7000} />
             )}
-            <div>
-                <ul>
-                    <li>address: {snapshot?.address}</li>
-                    <li>realToken: {snapshot?.realToken}</li>
-                    <li>virtualToken: {snapshot?.virtualToken}</li>
-                </ul>
-            </div>
         </>
     );
 };
