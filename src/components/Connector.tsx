@@ -1,13 +1,11 @@
-// import { useOpenConnectModal } from "@0xsequence/kit";
+import { useOpenConnectModal } from "@0xsequence/kit";
 import { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../FirebaseConfig';
 import { Box } from '@0xsequence/design-system';
-import WalletConnector from "./WalletConnector";
 
-const Connector = (props: { setSignIn: React.Dispatch<React.SetStateAction<boolean>> }) => {
-  // const { setOpenConnectModal } = useOpenConnectModal();
-  const { setSignIn } = props
+const Connector = () => {
+  const { setOpenConnectModal } = useOpenConnectModal();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -33,6 +31,7 @@ const Connector = (props: { setSignIn: React.Dispatch<React.SetStateAction<boole
           setIsFirebaseConnected(true);
           // ...
           console.log('user: ', user.getIdToken());
+          console.log("auth.currentUser: ", auth.currentUser);
         }).
         catch(function (error) {
           setIsFirebaseConnected(false);
@@ -47,6 +46,8 @@ const Connector = (props: { setSignIn: React.Dispatch<React.SetStateAction<boole
           console.log(error);
         });
     }
+
+
   }
 
   return (
@@ -88,13 +89,12 @@ const Connector = (props: { setSignIn: React.Dispatch<React.SetStateAction<boole
           </button>
         </Box>
         :
-        <WalletConnector setSignIn={setSignIn} />
-        // <Box display="flex" flexDirection="column" gap="2" marginBottom="8">
-        //   <p>Wallet Not connected</p>
-        //   <div className="card">
-        //     <button onClick={() => setOpenConnectModal(true)}>Connect</button>
-        //   </div>
-        // </Box>
+        <Box display="flex" flexDirection="column" gap="2" marginBottom="8">
+          <p>Wallet Not connected</p>
+          <div className="card">
+            <button onClick={() => setOpenConnectModal(true)}>Connect</button>
+          </div>
+        </Box>
       }
     </>
   );

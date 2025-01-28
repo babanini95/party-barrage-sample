@@ -1,19 +1,13 @@
-// import { useDisconnect } from "wagmi";
+import { useDisconnect } from "wagmi";
 import { auth } from "../FirebaseConfig";
-import { waas } from "../WaasConfig";
 import { signOut } from "firebase/auth";
 
 const Disconnector = () => {
-  // const { disconnect } = useDisconnect();
-  const disconnect = () => {
-    disconnectFirebase();
-    disconnectWallet();
-  }
+  const { disconnect } = useDisconnect();
 
-  const disconnectWallet = async () => {
-    const sessions = await waas.listSessions()
-    console.log(sessions);
-    await waas.dropSession({ sessionId: sessions[0].id })
+  const disconnectButton = () => {
+    disconnect();
+    disconnectFirebase();
   }
 
   const disconnectFirebase = async () => {
@@ -28,7 +22,7 @@ const Disconnector = () => {
 
   return (
     <div className="card">
-      <button onClick={() => disconnect()}>Disconnect</button>
+      <button onClick={() => disconnectButton()}>Disconnect</button>
     </div>
   );
 };

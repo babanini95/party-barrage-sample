@@ -1,44 +1,14 @@
 import { Box, Text } from "@0xsequence/design-system";
-// import { useAccount } from "wagmi";
+import { useAccount } from "wagmi";
 import ChainInfo from "./ChainInfo";
 import Disconnector from "./Disconnector";
-import TestSignMessage from "./TestSignMessage";
-import TestVerifyMessage from "./TestVerifyMessage";
-import TestSendTransaction from "./TestSendTransaction";
 import TestConvertToken from "./TestConvertToken";
 import { Missing } from "./Missing";
-import { waas } from "../WaasConfig";
-import { getChain } from "../util";
-// import { toNetworkID } from "@0xsequence/waas/dist/declarations/src/networks";
-import { useEffect, useState } from "react";
-import { Address } from "viem";
+import { User } from "firebase/auth";
 
-const MainConnected = () => {
-  // const { address, chain, chainId } = useAccount();
-  const [address, setAddress] = useState<Address>();
-
-  useEffect(() => {
-    const getAddress = async () => {
-      const walletAddress = await waas.getAddress();
-      setAddress(walletAddress as Address);
-    }
-    getAddress();
-
-    return () => {
-      setAddress("" as Address);
-    }
-
-  }, []);
-
-  function getValueOfNumber(val: string | number): number {
-    if (typeof val === 'number') {
-      return val.valueOf(); // number.valueOf() returns itself, so this is just for demonstration
-    }
-    return 0; // if it's a string, return undefined
-  }
-
-  const chainId = getValueOfNumber(waas.config.network.valueOf());
-  const chain = getChain(chainId);
+const MainConnected = (props: { currentFirebaseUser: User | null }) => {
+  const { address, chain, chainId } = useAccount();
+  const { currentFirebaseUser } = props;
 
   if (!address) {
     return <Missing>an address</Missing>;
@@ -55,12 +25,9 @@ const MainConnected = () => {
         Connected with address: {address}
       </Text>
       <Disconnector />
-      <ChainInfo chain={chain} address={address} />
+      <ChainInfo chain={chain} address={address} currentFirebaseUser={currentFirebaseUser} />
       <Box display="flex" flexDirection="column" gap="4">
-        <TestConvertToken chainId={chainId} />
-        <TestSignMessage />
-        <TestVerifyMessage chainId={chainId} />
-        <TestSendTransaction chainId={chainId} />
+        <TestConvertToken chainId={chainId} currentFirebaseUser={currentFirebaseUser} />
       </Box>
     </>
   );

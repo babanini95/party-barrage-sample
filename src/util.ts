@@ -1,6 +1,4 @@
-import { mainnet, sepolia } from "viem/chains";
-
-const chains = { mainnet, sepolia }
+import chains from "./constants";
 
 /**
  * Gets the chain object for the given chain id.
