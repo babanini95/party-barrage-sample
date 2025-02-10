@@ -1,50 +1,75 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { useWriteContract, useWaitForTransactionReceipt, useWalletClient } from "wagmi";
-import { Chain } from "viem";
+import { Address, Chain } from "viem";
 import { Box, Text } from "@0xsequence/design-system";
-import { abi } from "../contract-abi";
+import { abi, contractAddress } from "../contract-abi";
 import { ethers } from "ethers";
 import { db } from "../FirebaseConfig";
-import { DocumentData, onSnapshot, doc, updateDoc, getDoc } from "firebase/firestore";
+import { DocumentData, onSnapshot, doc, updateDoc } from "firebase/firestore";
 import ErrorToast from "./ErrorToast";
-import chains from "../constants";
 import CardButton from "./CardButton";
 import { User } from "firebase/auth";
+import NativeBalance from "./ChainInfo/NativeBalance";
 
-const TestConvertToken = (props: { chainId: number; currentFirebaseUser: User | null }) => {
-    const { chainId, currentFirebaseUser } = props;
-    const {
-        writeContractAsync,
-        data: txnData,
-        error,
-        isPending: isPendingTx,
-        reset
-    } = useWriteContract();
-    const { isLoading: isConfirming, isSuccess: isConfirmed } =
-        useWaitForTransactionReceipt({
-            hash: txnData,
-        });
+const TestConvertToken = (props: { chain: Chain; currentFirebaseUser: User | null; address: Address; }) => {
+    const { chain, currentFirebaseUser, address } = props;
     const { data: walletClient } = useWalletClient();
-    const [inputAmount, setInputIngameToken] = useState(0);
-    const [ingameTokenAmount, setIngameToken] = useState(0);
-    const [lastTransaction, setLastTransaction] = useState<string | null>(null);
-    const [network, setNetwork] = useState<Chain | null>(null);
     const [snapshot, setSnapshot] = useState<DocumentData>();
+    const [isNeedToRefresh, setIsNeedToRefresh] = useState<boolean>(false);
+
+    /*//////////////////////////////////////////////////////////////
+                        CONVERT SHARD CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+    const {
+        writeContractAsync: writeLimitedTokenAsync,
+        data: txnData1,
+        error: error1,
+        isPending: isPendingTx1,
+        reset: reset1,
+    } = useWriteContract();
+    const {
+        isLoading: isConfirmingTx1,
+        isSuccess: isConfirmedTx1
+    } = useWaitForTransactionReceipt({ hash: txnData1 });
+    const [inputShard, setInputShard] = useState(0);
+    const [shardAmount, setShardAmount] = useState(0);
+    const [lastTransaction1, setLastTransaction1] = useState<string | null>(null);
+
+    /*//////////////////////////////////////////////////////////////
+                         CONVERT COIN CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+    const {
+        writeContractAsync: writeUnlimitedTokenAsync,
+        data: txnData2,
+        error: error2,
+        isPending: isPendingTx2,
+        reset: reset2,
+    } = useWriteContract();
+    const {
+        isLoading: isConfirmingTx2,
+        isSuccess: isConfirmedTx2
+    } = useWaitForTransactionReceipt({ hash: txnData2 });
+    const [inputCoin, setInputCoin] = useState(0);
+    const [coinAmount, setCoinAmount] = useState(0);
+    const [lastTransaction2, setLastTransaction2] = useState<string | null>(null);
 
     useEffect(() => {
-        if (txnData) {
-            setLastTransaction(txnData);
-            setIngameToken(0);
+        if (txnData1) {
+            setLastTransaction1(txnData1);
+            setShardAmount(0);
+            setIsNeedToRefresh(true);
         }
-        if (error) console.error(error)
-    }, [txnData, error]);
+        if (error1) console.error(error1)
+    }, [txnData1, error1]);
 
     useEffect(() => {
-        const chainResult = chains.find((chain) => chain.id === chainId);
-        if (chainResult) {
-            setNetwork(chainResult);
+        if (txnData2) {
+            setLastTransaction2(txnData2);
+            setCoinAmount(0);
+            setIsNeedToRefresh(true);
         }
-    }, [chainId]);
+        if (error2) console.error(error2)
+    }, [txnData2, error2]);
 
     useEffect(() => {
         if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
@@ -53,76 +78,85 @@ const TestConvertToken = (props: { chainId: number; currentFirebaseUser: User | 
                 console.log("Current data: ", doc.data());
                 if (doc.exists()) {
                     setSnapshot(doc.data());
-                    const ingameTokenData = doc.data().wallet.virtualTokenBalance;
-                    setIngameToken(ingameTokenData);
-                    console.log("ingameTokenData", ingameTokenData);
+                    const shardAmountFromDoc = doc.data().shard;
+                    const coinAmountFromDoc = doc.data().coin;
+                    setShardAmount(shardAmountFromDoc);
+                    setCoinAmount(coinAmountFromDoc);
+                    console.log("shardAmountFromDoc", shardAmountFromDoc);
+                    console.log("coinAmountFromDoc", coinAmountFromDoc);
                 }
             });
             return () => unsubscribe();
         }
     }, [currentFirebaseUser]);
 
-    useEffect(() => {
-        fetchWalletData();
-    }, [currentFirebaseUser])
-
-    const onChangeIngameTokenAmount = (event: ChangeEvent<HTMLInputElement>) => {
+    const onChangeShardAmount = (event: ChangeEvent<HTMLInputElement>) => {
         const value = event.target.valueAsNumber;
-        setInputIngameToken(value);
+        setInputShard(value);
         if (value < 0) {
-            setInputIngameToken(0);
+            setInputShard(0);
         };
     };
 
-    const addIngameToken = () => {
-        const valueToUpdate: number = snapshot?.wallet.virtualTokenBalance + inputAmount;
-        updateIngameToken(valueToUpdate).then(() => {
-            setInputIngameToken(0);
+    const onChangeCoinAmount = (event: ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.valueAsNumber;
+        setInputCoin(value);
+        if (value < 0) {
+            setInputCoin(0);
+        };
+    };
+
+    const addShard = () => {
+        const valueToUpdate: number = snapshot?.shard + inputShard;
+        updateShard(valueToUpdate).then(() => {
+            setInputShard(0);
         });
     };
 
-    const convertToken = async () => {
-        if (!walletClient) return;
-        const amountTokenConvert = ethers.parseUnits(String(ingameTokenAmount), 18);
-        console.log("token convert: " + amountTokenConvert);
-        await writeContractAsync({
-            abi: abi,
-            address: '0x5F5A4a3265b11Ac296Da9B661901D39ACF6217bA',
-            functionName: 'claimToken',
-            args: [amountTokenConvert]
+    const addCoin = () => {
+        const valueToUpdate: number = snapshot?.coin + inputCoin;
+        updateCoin(valueToUpdate).then(() => {
+            setInputCoin(0);
         });
-        updateRealToken(snapshot?.wallet.tokenBalance + ingameTokenAmount);
-        updateIngameToken(0);
+    };
+
+    const convertShard = async () => {
+        if (!walletClient) return;
+        const amountShardToConvert = ethers.parseUnits(String(shardAmount), 18);
+        console.log("shard to convert: " + amountShardToConvert);
+        await writeLimitedTokenAsync({
+            abi: abi,
+            address: contractAddress,
+            functionName: 'claimLimitedToken',
+            args: [amountShardToConvert]
+        });
+        updateShard(0);
         console.log("convert success");
     };
 
-    const fetchWalletData = async () => {
-        try {
-            if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
-                const docRef = doc(db, "Players", currentFirebaseUser.displayName);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    const docData = docSnap.data();
-                    setIngameToken(docData.wallet.virtualTokenBalance);
-                    console.log(docData);
-                }
-            }
-        }
-        catch (err) {
-            console.error(err);
-        }
+    const convertCoin = async () => {
+        if (!walletClient) return;
+        const amountCoinToConvert = ethers.parseUnits(String(coinAmount), 18);
+        console.log("coin to convert: " + amountCoinToConvert);
+        await writeUnlimitedTokenAsync({
+            abi: abi,
+            address: contractAddress,
+            functionName: 'claimUnlimitedToken',
+            args: [amountCoinToConvert]
+        });
+        updateCoin(0);
+        console.log("convert success");
     };
 
-    const updateIngameToken = async (valueToUpdate: number) => {
+    const updateShard = async (valueToUpdate: number) => {
         try {
             if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
                 const docRef = doc(db, "Players", currentFirebaseUser.displayName);
                 console.log("valueToUpdate:", valueToUpdate);
                 await updateDoc(docRef, {
-                    "wallet.virtualTokenBalance": valueToUpdate
+                    "shard": valueToUpdate
                 });
-                setIngameToken(valueToUpdate);
+                setShardAmount(valueToUpdate);
                 console.log("success");
             }
         }
@@ -131,14 +165,16 @@ const TestConvertToken = (props: { chainId: number; currentFirebaseUser: User | 
         }
     };
 
-    const updateRealToken = async (valueToUpdate: number) => {
+    const updateCoin = async (valueToUpdate: number) => {
         try {
             if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
                 const docRef = doc(db, "Players", currentFirebaseUser.displayName);
+                console.log("valueToUpdate:", valueToUpdate);
                 await updateDoc(docRef, {
-                    "wallet.tokenBalance": valueToUpdate
+                    "coin": valueToUpdate
                 });
-                console.log("real token update success");
+                setCoinAmount(valueToUpdate);
+                console.log("success");
             }
         }
         catch (err) {
@@ -148,51 +184,96 @@ const TestConvertToken = (props: { chainId: number; currentFirebaseUser: User | 
 
     return (
         <>
+            <NativeBalance chain={chain} address={address} needToRefreshBalance={isNeedToRefresh} setNeedToRefresh={setIsNeedToRefresh} />
             <Box
                 display="flex"
                 flexDirection="column"
                 gap="8"
             >
                 <Box display="inline-flex" flexDirection="row" gap="4" marginBottom="4">
-                    <label>
-                        Ingame Token:  <input
-                            value={inputAmount}
-                            onChange={onChangeIngameTokenAmount}
-                            type="number"
-                        />
-                    </label>
-                    <button onClick={addIngameToken}>
-                        Add Virtual Token
+                    <Box display="flex" flexDirection="column" gap="4">
+                        <label>
+                            Generate Shard:  <input
+                                value={inputShard}
+                                onChange={onChangeShardAmount}
+                                type="number"
+                            />
+                        </label>
+                        <Text>Shard: {shardAmount}</Text>
+                    </Box>
+                    <button onClick={addShard}>
+                        Add Shard
                     </button>
+                    <Box display="flex" flexDirection="column" gap="4" marginBottom="8">
+                        <CardButton
+                            title="Convert Shard"
+                            description="Convert Shard to Real Token 1"
+                            isPending={isPendingTx1}
+                            onClick={convertShard}
+                        />
+                        {isConfirmingTx1 && <Text>Confirming transaction...</Text>}
+                        {isConfirmedTx1 && <Text>Transaction Confirmed</Text>}
+                    </Box>
                 </Box>
-                <Box display="flex" flexDirection="column" gap="4" marginBottom="8">
-                    <Text>virtualToken: {snapshot?.wallet.virtualTokenBalance}</Text>
-                    <CardButton
-                        title="Convert"
-                        description="Convert Ingame Token"
-                        isPending={isPendingTx}
-                        onClick={convertToken}
-                    />
-                    {isConfirming && <Text>Confirming transaction...</Text>}
-                    {isConfirmed && <Text>Transaction Confirmed</Text>}
+                <Box display="inline-flex" flexDirection="row" gap="4" marginBottom="4">
+                    <Box display="flex" flexDirection="column" gap="4">
+                        <label>
+                            Generate Coin:  <input
+                                value={inputCoin}
+                                onChange={onChangeCoinAmount}
+                                type="number"
+                            />
+                        </label>
+                        <Text>Coin: {coinAmount}</Text>
+                    </Box>
+                    <button onClick={addCoin}>
+                        Add Coin
+                    </button>
+                    <Box display="flex" flexDirection="column" gap="4" marginBottom="8">
+                        <CardButton
+                            title="Convert Coin"
+                            description="Convert Coin to Real Token 2"
+                            isPending={isPendingTx2}
+                            onClick={convertCoin}
+                        />
+                        {isConfirmingTx2 && <Text>Confirming transaction...</Text>}
+                        {isConfirmedTx2 && <Text>Transaction Confirmed</Text>}
+                    </Box>
                 </Box>
             </Box>
-            {lastTransaction && (
+            {lastTransaction1 && (
                 <Box display="flex" flexDirection="column" gap="4">
-                    <Text>Last transaction hash: {lastTransaction}</Text>
+                    <Text>Last convert shard hash: {lastTransaction1}</Text>
                     <button>
                         <a
                             target="_blank"
-                            href={`${network?.blockExplorers?.default?.url}/tx/${lastTransaction}`}
+                            href={`${chain.blockExplorers?.default?.url}/tx/${lastTransaction1}`}
                             rel="noreferrer"
                         >
-                            Click to view on {network?.name}
+                            Click to view on {chain.name}
                         </a>
                     </button>
                 </Box>
             )}
-            {error && (
-                <ErrorToast message={error.message} onClose={reset} duration={7000} />
+            {error1 && (
+                <ErrorToast message={error1.message} onClose={reset1} duration={7000} />
+            )}
+            {lastTransaction2 && (
+                <Box display="flex" flexDirection="column" gap="4">
+                    <Text>Last convert coin hash: {lastTransaction2}</Text>
+                    <button>
+                        <a
+                            target="_blank"
+                            href={`${chain?.blockExplorers?.default?.url}/tx/${lastTransaction2}`}
+                            rel="noreferrer"
+                        >
+                            Click to view on {chain?.name}
+                        </a>
+                    </button>
+                </Box>
+            )}
+            {error2 && (
+                <ErrorToast message={error2.message} onClose={reset2} duration={7000} />
             )}
         </>
     );

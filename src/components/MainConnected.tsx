@@ -25,9 +25,9 @@ const MainConnected = (props: { currentFirebaseUser: User | null }) => {
         Connected with address: {address}
       </Text>
       <Disconnector />
-      <ChainInfo chain={chain} address={address} currentFirebaseUser={currentFirebaseUser} />
+      <ChainInfo chain={chain} />
       <Box display="flex" flexDirection="column" gap="4">
-        <TestConvertToken chainId={chainId} currentFirebaseUser={currentFirebaseUser} />
+        <TestConvertToken chain={chain} currentFirebaseUser={currentFirebaseUser} address={address} />
       </Box>
     </>
   );

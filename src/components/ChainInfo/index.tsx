@@ -1,11 +1,9 @@
 import { Box } from "@0xsequence/design-system";
-import { Address, Chain } from "viem";
+import { Chain } from "viem";
 import ActiveChain from "./ActiveChain";
-import NativeBalance from "./NativeBalance";
-import { User } from "firebase/auth";
 
-const ChainInfo = (props: { chain: Chain; address: Address; currentFirebaseUser: User | null }) => {
-  const { chain, address, currentFirebaseUser } = props;
+const ChainInfo = (props: { chain: Chain; }) => {
+  const { chain } = props;
 
   return (
     <Box marginBottom="8">
@@ -17,7 +15,6 @@ const ChainInfo = (props: { chain: Chain; address: Address; currentFirebaseUser:
       >
         <ActiveChain chain={chain} />
       </Box>
-      <NativeBalance chain={chain} address={address} currentFirebaseUser={currentFirebaseUser} />
     </Box>
   );
 };

@@ -59,9 +59,48 @@ export const abi = [
                 "type": "uint256"
             }
         ],
-        "name": "claimToken",
+        "name": "claimLimitedToken",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "amountToken",
+                "type": "uint256"
+            }
+        ],
+        "name": "claimUnlimitedToken",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getRealToken1Address",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getRealToken2Address",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -82,19 +121,6 @@ export const abi = [
         "name": "renounceOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "rewardsTokenTST",
-        "outputs": [
-            {
-                "internalType": "contract IERC20",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -124,3 +150,5 @@ export const abi = [
         "type": "function"
     }
 ]
+
+export const contractAddress = '0x865215d5d0de5f22542bfb301f87185ebbfdea42';

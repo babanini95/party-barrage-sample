@@ -1,23 +1,28 @@
 import { Box, IconButton, Text, RefreshIcon } from "@0xsequence/design-system";
 import { SequenceIndexer } from "@0xsequence/indexer";
 import { allNetworks } from "@0xsequence/network";
-import { doc, updateDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Address, Chain } from "viem";
-import { db } from "../../FirebaseConfig";
-import { User } from "firebase/auth";
 
 const projectAccessKey = import.meta.env.NEXT_PUBLIC_PROJECT_ACCESS_KEY;
 
-const NativeBalance = (props: { chain: Chain; address: Address; currentFirebaseUser: User | null }) => {
-  const { chain, address, currentFirebaseUser } = props;
-  const [balance, setBalance] = useState<string | undefined>();
-  const [testTokenBalance, setTokenBalance] = useState<string | undefined>();
-  const TESTTOKEN_ADDRESS = '0x7f61b73da268a0ad18a3c7171653d0c151626f92';
+const NativeBalance = (props: { chain: Chain; address: Address; needToRefreshBalance: boolean; setNeedToRefresh: (value: React.SetStateAction<boolean>) => void }) => {
+  const { chain, address } = props;
+  const [etherBalance, setEtherBalance] = useState<string | undefined>();
+  const [_realToken1Balance, setRealToken1Balance] = useState<string | undefined>();
+  const [_realToken2Balance, setRealToken2Balance] = useState<string | undefined>();
+  const REAL_TOKEN_1_ADDRESS = "0x8dc783fae3d1a40a43962eae05861b30bc590618";
+  const REAL_TOKEN_2_ADDRESS = "0xa62e75ab8460f2e15517ab81b03992abbcd726a4";
 
   useEffect(() => {
     getNativeAndTokenBalance(address, chain);
   }, [address, chain]);
+
+  useEffect(() => {
+    if (props.needToRefreshBalance) {
+      getNativeAndTokenBalance(address, chain);
+    }
+  }, [props.needToRefreshBalance]);
 
   const getNativeAndTokenBalance = (_address: `0x${string}`, _chain: Chain) => {
     if (!_address || !_chain) return;
@@ -27,7 +32,7 @@ const NativeBalance = (props: { chain: Chain; address: Address; currentFirebaseU
         (chainInfo) => chainInfo.chainId === chainId,
       )?.name;
       if (!chainName) {
-        setBalance("ERROR");
+        setEtherBalance("ERROR");
         return;
       }
       const indexer = new SequenceIndexer(
@@ -37,17 +42,23 @@ const NativeBalance = (props: { chain: Chain; address: Address; currentFirebaseU
       const tokenBalances = await indexer.getEtherBalance({
         accountAddress: _address,
       });
-      if (tokenBalances) setBalance(normalizeStringBalance(tokenBalances?.balance?.balanceWei));
-      const testTokenBalances = await indexer.getTokenBalances({
-        contractAddress: TESTTOKEN_ADDRESS,
+      if (tokenBalances) setEtherBalance(normalizeStringBalance(tokenBalances?.balance?.balanceWei));
+      const realToken1Balances = await indexer.getTokenBalances({
+        contractAddress: REAL_TOKEN_1_ADDRESS,
         accountAddress: _address,
       });
-      if (testTokenBalances && _chain.id == 11155111) {
-        const balance = normalizeStringBalance(testTokenBalances?.balances[0]?.balance);
-        setTokenBalance(balance);
-        const balanceNumber = Number(balance);
-        updateFirebaseRealToken(balanceNumber);
+      const realToken2Balances = await indexer.getTokenBalances({
+        contractAddress: REAL_TOKEN_2_ADDRESS,
+        accountAddress: _address,
+      })
+      if (realToken1Balances && realToken2Balances && _chain.id == 11155111) {
+        const realToken1BalanceNormalized = normalizeStringBalance(realToken1Balances.balances[0].balance);
+        const realToken2BalanceNormalized = normalizeStringBalance(realToken2Balances.balances[0].balance);
+        setRealToken1Balance(realToken1BalanceNormalized);
+        setRealToken2Balance(realToken2BalanceNormalized);
       }
+
+      props.setNeedToRefresh(false);
     };
 
     const normalizeStringBalance = (stringBalance: string) => {
@@ -60,32 +71,21 @@ const NativeBalance = (props: { chain: Chain; address: Address; currentFirebaseU
     loadNativeNetworkBalance(_chain.id).then(() => console.log("Done"));
   }
 
-  const updateFirebaseRealToken = async (valueToUpdate: number) => {
-    try {
-      if (currentFirebaseUser?.displayName !== null && currentFirebaseUser?.displayName !== undefined) {
-        const docRef = doc(db, "Players", currentFirebaseUser.displayName);
-        console.log("real token update:", valueToUpdate);
-        await updateDoc(docRef, {
-          "wallet.tokenBalance": valueToUpdate
-        });
-        console.log("real token update success");
-      }
-    }
-    catch (err) {
-      console.error(err);
-    }
-  };
-
   return (
     <Box marginBottom="8">
       <Box display="flex">
         <Text variant="large" fontWeight="bold" color="text100">
-          {chain.nativeCurrency.name} balance: {balance || "loading..."}
+          {chain.nativeCurrency.name} balance: {etherBalance || "loading..."}
         </Text>
       </Box>
       <Box display="flex">
         <Text variant="large" fontWeight="bold" color="text100">
-          Test Token balance: {testTokenBalance || "loading..."}
+          Real Token 1 balance: {_realToken1Balance || "loading..."}
+        </Text>
+      </Box>
+      <Box display="flex">
+        <Text variant="large" fontWeight="bold" color="text100">
+          Real Token 2 balance: {_realToken2Balance || "loading..."}
         </Text>
         <IconButton icon={RefreshIcon} onClick={() => getNativeAndTokenBalance(address, chain)} size="xs" marginLeft={"4"} />
       </Box>
